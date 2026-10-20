@@ -14,7 +14,7 @@
 git clone --recurse-submodules https://github.com/PIGU-PPPgu/intelliPaperclip.git
 ```
 
-需要 Node.js 24+ 和与各模块锁定版本兼容的 Paperclip。每个模块的安装和权限边界见其 README。源码检查：
+需要 Node.js 24+ 和与各模块锁定版本兼容的 Paperclip。NAS Source 当前针对 macOS 的 SMB 挂载实现；每个模块的安装和权限边界见其 README。源码检查：
 
 ```sh
 npm ci --prefix extensions/paperclip-department-nas-source
