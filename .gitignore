@@ -1,0 +1,24 @@
+.DS_Store
+**/node_modules/
+**/dist/
+**/.cache/
+*.log
+
+# Local instance state and operational notes are not part of the public source.
+/DEPLOYMENT.md
+/README.local.md
+/design/
+/localization/
+/scripts/
+/wiki-pages/
+/backups/
+/state/
+/logs/
+/secrets/
+*.sql
+*.sql.gz
+.env
+.env.*
+*.pem
+*.key
+*.p12

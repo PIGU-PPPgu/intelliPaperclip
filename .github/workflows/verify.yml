@@ -1,0 +1,36 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  extensions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            extensions/paperclip-department-nas-source/package-lock.json
+            extensions/paperclip-department-workbench/package-lock.json
+            open-source/paperclip-zh/sidecar/package-lock.json
+      - name: NAS Source
+        run: |
+          npm ci --prefix extensions/paperclip-department-nas-source
+          npm run check --prefix extensions/paperclip-department-nas-source
+          npm test --prefix extensions/paperclip-department-nas-source
+      - name: Department workbench
+        run: |
+          npm ci --prefix extensions/paperclip-department-workbench
+          npm run typecheck --prefix extensions/paperclip-department-workbench
+          npm test --prefix extensions/paperclip-department-workbench
+          npm run build --prefix extensions/paperclip-department-workbench
+      - name: Chinese UI
+        run: |
+          npm ci --prefix open-source/paperclip-zh/sidecar
+          npm test --prefix open-source/paperclip-zh

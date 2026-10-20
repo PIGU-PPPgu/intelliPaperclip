@@ -1,0 +1,6 @@
+[submodule "extensions/paperclip-department-workbench"]
+	path = extensions/paperclip-department-workbench
+	url = https://github.com/PIGU-PPPgu/paperclip-department-workbench.git
+[submodule "open-source/paperclip-zh"]
+	path = open-source/paperclip-zh
+	url = https://github.com/PIGU-PPPgu/paperclip-zh-ui-overlay.git
