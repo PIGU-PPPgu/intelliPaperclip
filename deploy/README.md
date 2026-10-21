@@ -1,6 +1,6 @@
 # 服务器部署
 
-这套配置面向**一台 Linux 服务器、多人登录、一个 Paperclip 服务进程**。同一 PostgreSQL 17 数据库保存 Paperclip 的组织、任务和工作台插件表；`paperclip-home` 卷保存配置、加密主密钥、上传文件和 Agent 文件。中文入口仅监听服务器的 `127.0.0.1`，由 Tailscale Serve 或 Caddy 提供 HTTPS。数据库端口不映射到主机。官方 Paperclip 镜像固定在与当前插件 SDK 相同的 `2026.916.1` 发布版和 OCI digest；升级前先在测试环境验证。
+这套配置面向**一台 Linux 服务器、多人登录、一个 Paperclip 服务进程**。同一 PostgreSQL 18 数据库保存 Paperclip 的组织、任务和工作台插件表；`paperclip-home` 卷保存配置、加密主密钥、上传文件和 Agent 文件。中文入口仅监听服务器的 `127.0.0.1`，由 Tailscale Serve 或 Caddy 提供 HTTPS。数据库端口不映射到主机。官方 Paperclip 镜像固定在与当前插件 SDK 相同的 `2026.916.1` 发布版和 OCI digest；升级前先在测试环境验证。
 
 ## 准备
 
@@ -61,7 +61,7 @@ NAS Source 源码也位于镜像的 `/opt/intellipaperclip/plugins/nas-source`�
 
 ### 从现有 Mac 迁移
 
-不要把 Mac 的数据库或 NAS 文件推到公开 GitHub。跨机器复制**完整实例**需要同版本数据库备份、对应的 Paperclip 数据目录与加密主密钥、以及登录签名密钥；单独的 `.sql.gz` 不能恢复附件和已加密凭据。源实例先暂停写入并做完整备份，再在空的 PostgreSQL 17 数据库恢复，最后把 Agent 的 Mac 路径、插件本地路径和 NAS 绑定重设为服务器上的有效路径。旧的 `local_trusted` Board 所有权应按官方认领流程转换。
+不要把 Mac 的数据库或 NAS 文件推到公开 GitHub。当前 Mac 实例使用 PostgreSQL 18；跨机器复制**完整实例**需要 PostgreSQL 18 的逻辑备份、对应的 Paperclip 数据目录与加密主密钥、以及登录签名密钥；单独的 `.sql.gz` 不能恢复附件和已加密凭据。源实例先暂停写入并做完整备份，再在空的 PostgreSQL 18 数据库恢复，最后把 Agent 的 Mac 路径、插件本地路径和 NAS 绑定重设为服务器上的有效路径。旧的 `local_trusted` Board 所有权应按官方认领流程转换。PostgreSQL 18 的官方镜像将数据卷挂载在 `/var/lib/postgresql`；如果已经用旧版部署包创建了 PostgreSQL 17 卷，不要直接替换镜像，应先备份并单独安排数据库大版本迁移。
 
 如果只迁移组织、Agent、项目和任务，可使用 Paperclip 的[公司导出/导入](https://docs.paperclip.ing/guides/power/export-import/)；它不传输密钥值、机器路径或历史审计。**工作台插件自有表和实例加密密钥仍须单独核对**，不能把公司包当作完整数据库备份。当前部署脚本不会自动覆盖现有 Mac 实例，也不会自动导入真实部门资料。
 
