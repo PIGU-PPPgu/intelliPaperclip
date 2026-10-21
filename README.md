@@ -31,3 +31,5 @@ npm test --prefix open-source/paperclip-zh
 ```
 
 NAS Source 的哈希校验快照模式仅用于验证下游流程，不代表实时 SMB 已可用。部署时应选择获准的非敏感目录，并在 Paperclip 中单独配置只读资料源。项目按 [MIT License](LICENSE) 开源；子模块保留各自的许可证。
+
+多人共享请从 [服务器部署](deploy/README.md) 开始。它包含独立 PostgreSQL、持久化文件卷、私网/公网 HTTPS、初始化、备份和恢复；本地 Mac 的实例数据仍需按迁移章节单独处理，不会被公开仓库自动上传。
