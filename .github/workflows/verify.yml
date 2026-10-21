@@ -2,6 +2,7 @@ name: verify
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 jobs:
@@ -54,7 +55,10 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:3100/_paperclip_zh/health | jq -e '.status == "ok"'
           docker compose --env-file deploy/.env -f deploy/compose.yaml exec -T db \
             psql -U paperclip -d paperclip -Atqc 'SELECT 1' | grep -qx 1
-          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3100/api/companies)" = 401
+          auth_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --header 'Host: paperclip.example.ts.net' http://127.0.0.1:3100/api/companies)
+          printf 'Unauthenticated company list returned HTTP %s\n' "$auth_status"
+          test "$auth_status" = 401 || test "$auth_status" = 403
       - name: Back up database and instance files
         run: |
           ./deploy/backup.sh

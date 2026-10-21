@@ -18,4 +18,5 @@ compose=(docker compose --env-file "$env_file" -f "$deploy_dir/compose.yaml")
 if [[ $exposure == public ]]; then compose+=(--profile public); fi
 "${compose[@]}" config -q
 "${compose[@]}" up -d --build --wait
-printf 'Paperclip and PostgreSQL are healthy. Open the HTTPS origin in %s.\n' "$env_file"
+public_url=$(sed -n 's/^PAPERCLIP_PUBLIC_URL=//p' "$env_file" | tail -n 1)
+printf 'Paperclip and PostgreSQL are healthy. Open %s\n' "$public_url"
