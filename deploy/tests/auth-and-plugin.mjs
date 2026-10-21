@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 if (process.env.CI !== "true") throw new Error("This synthetic admin test runs only in disposable CI");
 const env = readFileSync(new URL("../.env", import.meta.url), "utf8");
@@ -29,10 +29,12 @@ async function request(label, pathname, method = "GET", body, cookie) {
 }
 
 const suffix = randomBytes(5).toString("hex");
+const email = `paperclip-ci-${suffix}@example.test`;
+const password = `Ci-${randomBytes(24).toString("hex")}`;
 const signup = await request("sign up", "/api/auth/sign-up/email", "POST", {
   name: "CI Admin",
-  email: `paperclip-ci-${suffix}@example.test`,
-  password: `Ci-${randomBytes(24).toString("hex")}`,
+  email,
+  password,
 });
 const cookie = (signup.response.headers.getSetCookie?.() ?? [])
   .map((value) => value.split(";", 1)[0])
@@ -49,4 +51,5 @@ const install = await request("workbench install", "/api/plugins/install", "POST
 assert.equal(install.data.pluginKey, "paperclip.department-workbench");
 const health = await request("workbench health", `/api/plugins/${install.data.id}/health`, "GET", undefined, cookie);
 assert.equal(health.data.healthy, true);
+writeFileSync("/tmp/intellipaperclip-ci-auth.json", JSON.stringify({ email, password }), { mode: 0o600 });
 console.log(JSON.stringify({ auth: "pass", adminClaim: "pass", plugin: install.data.pluginKey, pluginHealth: health.data.status }));
