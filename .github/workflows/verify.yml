@@ -60,6 +60,8 @@ jobs:
             jq -e '.deploymentMode == "authenticated" and .deploymentExposure == "private"'
           docker compose --env-file deploy/.env -f deploy/compose.yaml exec -T db \
             psql -U paperclip -d paperclip -Atqc 'SELECT 1' | grep -qx 1
+          docker compose --env-file deploy/.env -f deploy/compose.yaml exec -T db \
+            psql -U paperclip -d paperclip -Atqc 'SHOW server_version_num' | grep -E -q '^18[0-9]{4}$'
           auth_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             --header 'Host: paperclip.example.ts.net' http://127.0.0.1:3100/api/companies)
           printf 'Unauthenticated company list returned HTTP %s\n' "$auth_status"
