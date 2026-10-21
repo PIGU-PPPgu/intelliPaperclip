@@ -1,0 +1,10 @@
+FROM node:24-alpine
+WORKDIR /app
+COPY open-source/paperclip-zh/sidecar/package.json open-source/paperclip-zh/sidecar/package-lock.json ./sidecar/
+RUN npm ci --omit=dev --prefix sidecar
+COPY open-source/paperclip-zh/sidecar/proxy.mjs ./sidecar/proxy.mjs
+COPY open-source/paperclip-zh/overlay.js open-source/paperclip-zh/overrides.zh-CN.json ./
+COPY open-source/paperclip-zh/vendor/penclip-zh-CN.json ./vendor/penclip-zh-CN.json
+COPY open-source/paperclip-zh/vendor/LICENSE.penclip ./vendor/LICENSE.penclip
+USER node
+CMD ["node", "sidecar/proxy.mjs"]

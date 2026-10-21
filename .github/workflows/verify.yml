@@ -2,6 +2,7 @@ name: verify
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 jobs:
@@ -34,3 +35,52 @@ jobs:
         run: |
           npm ci --prefix open-source/paperclip-zh/sidecar
           npm test --prefix open-source/paperclip-zh
+
+  server-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate scripts and Compose
+        run: |
+          for script in deploy/*.sh; do bash -n "$script"; done
+          ./deploy/init-env.sh private https://paperclip.example.ts.net
+          docker compose --env-file deploy/.env -f deploy/compose.yaml config -q
+          docker compose --env-file deploy/.env -f deploy/compose.yaml --profile public config -q
+      - name: Start Paperclip with PostgreSQL and Chinese UI
+        run: |
+          timeout 18m ./deploy/up.sh
+          curl --fail --silent --show-error http://127.0.0.1:3100/_paperclip_zh/health | jq -e '.status == "ok"'
+          curl --fail --silent --show-error http://127.0.0.1:3100/api/health | \
+            jq -e '.deploymentMode == "authenticated" and .deploymentExposure == "private"'
+          docker compose --env-file deploy/.env -f deploy/compose.yaml exec -T db \
+            psql -U paperclip -d paperclip -Atqc 'SELECT 1' | grep -qx 1
+          auth_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --header 'Host: paperclip.example.ts.net' http://127.0.0.1:3100/api/companies)
+          printf 'Unauthenticated company list returned HTTP %s\n' "$auth_status"
+          test "$auth_status" = 401 || test "$auth_status" = 403
+          node deploy/tests/auth-and-plugin.mjs
+      - name: Back up database and instance files
+        run: |
+          ./deploy/backup.sh
+          test -s deploy/backups/*/database.dump
+          test -s deploy/backups/*/paperclip-home.tar.gz
+      - name: Restore into disposable empty volumes
+        run: |
+          backup_dir=$(find deploy/backups -mindepth 1 -maxdepth 1 -type d | head -n 1)
+          docker compose --env-file deploy/.env -f deploy/compose.yaml down -v
+          ./deploy/restore.sh "$PWD/$backup_dir"
+          ./deploy/up.sh
+          curl --fail --silent --show-error http://127.0.0.1:3100/_paperclip_zh/health | jq -e '.status == "ok"'
+          node deploy/tests/verify-restored.mjs
+      - name: Show diagnostics on failure
+        if: failure()
+        run: docker compose --env-file deploy/.env -f deploy/compose.yaml logs --tail 100 || true
+      - name: Stop test containers
+        if: always()
+        run: docker compose --env-file deploy/.env -f deploy/compose.yaml down || true

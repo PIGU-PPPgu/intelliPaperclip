@@ -1,0 +1,16 @@
+# Keep the Paperclip host and SDK on the same tested release.
+FROM node:24-trixie-slim AS extensions
+WORKDIR /build
+
+COPY extensions/paperclip-department-workbench/package.json extensions/paperclip-department-workbench/package-lock.json /build/workbench/
+RUN npm ci --prefix /build/workbench
+COPY extensions/paperclip-department-workbench/ /build/workbench/
+RUN npm run typecheck --prefix /build/workbench && npm test --prefix /build/workbench && npm run build --prefix /build/workbench
+
+COPY extensions/paperclip-department-nas-source/package.json extensions/paperclip-department-nas-source/package-lock.json /build/nas-source/
+RUN npm ci --omit=dev --prefix /build/nas-source
+COPY extensions/paperclip-department-nas-source/ /build/nas-source/
+
+FROM ghcr.io/paperclipai/paperclip:2026.916.1@sha256:a02ac35ac41df911af477422ea0e781cf41d2b2c600c66f0a5ac9d8c63f52c2c
+COPY --chown=node:node --from=extensions /build/workbench/ /opt/intellipaperclip/plugins/workbench/
+COPY --chown=node:node --from=extensions /build/nas-source/ /opt/intellipaperclip/plugins/nas-source/

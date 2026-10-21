@@ -12,6 +12,8 @@
 /scripts/
 /wiki-pages/
 /backups/
+/deploy/.env
+/deploy/backups/
 /state/
 /logs/
 /secrets/

@@ -1,0 +1,103 @@
+name: intellipaperclip
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: paperclip
+      POSTGRES_DB: paperclip
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run deploy/init-env.sh first}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperclip -d paperclip"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  paperclip:
+    image: intellipaperclip-paperclip:2026.916.1
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.paperclip
+    restart: unless-stopped
+    pids_limit: 2048
+    stop_grace_period: 90s
+    ports:
+      - "127.0.0.1:${PAPERCLIP_INTERNAL_PORT:-3102}:3100"
+    environment:
+      DATABASE_URL: postgresql://paperclip:${POSTGRES_PASSWORD:?Run deploy/init-env.sh first}@db:5432/paperclip
+      PORT: "3100"
+      SERVE_UI: "true"
+      PAPERCLIP_HOME: /paperclip
+      PAPERCLIP_INSTANCE_ID: default
+      PAPERCLIP_DEPLOYMENT_MODE: authenticated
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: ${PAPERCLIP_DEPLOYMENT_EXPOSURE:?private or public}
+      PAPERCLIP_PUBLIC_URL: ${PAPERCLIP_PUBLIC_URL:?HTTPS address required}
+      PAPERCLIP_AUTH_PUBLIC_BASE_URL: ${PAPERCLIP_PUBLIC_URL:?HTTPS address required}
+      PAPERCLIP_AUTH_BASE_URL_MODE: explicit
+      PAPERCLIP_ALLOWED_HOSTNAMES: ${PAPERCLIP_HOSTNAME:?Host required}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Generate a secret}
+      PAPERCLIP_AGENT_JWT_SECRET: ${PAPERCLIP_AGENT_JWT_SECRET:?Generate a secret}
+      PAPERCLIP_TOOL_ACTION_SIGNING_SECRET: ${PAPERCLIP_TOOL_ACTION_SIGNING_SECRET:?Generate a secret}
+      TRUST_PROXY: "1"
+    volumes:
+      - paperclip_home:/paperclip
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3100/api/health').then(async r => process.exit(r.ok && (await r.json()).status === 'ok' ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 120s
+      retries: 18
+
+  zh:
+    image: intellipaperclip-zh:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.zh
+    # Linux host networking lets the sidecar keep its loopback-only boundary.
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      PAPERCLIP_UPSTREAM_URL: http://127.0.0.1:${PAPERCLIP_INTERNAL_PORT:-3102}
+      PAPERCLIP_ZH_BIND_HOST: 127.0.0.1
+      PAPERCLIP_ZH_BIND_PORT: ${PAPERCLIP_ZH_PORT:-3100}
+      PAPERCLIP_ZH_PUBLIC_ORIGIN: ${PAPERCLIP_PUBLIC_URL:?HTTPS address required}
+    depends_on:
+      paperclip:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:' + process.env.PAPERCLIP_ZH_BIND_PORT + '/_paperclip_zh/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: [public]
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      PAPERCLIP_HOSTNAME: ${PAPERCLIP_HOSTNAME:?Host required}
+      PAPERCLIP_ZH_PORT: ${PAPERCLIP_ZH_PORT:-3100}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      zh:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+    name: intellipaperclip-pgdata
+  paperclip_home:
+    name: intellipaperclip-home
+  caddy_data:
+    name: intellipaperclip-caddy-data
+  caddy_config:
+    name: intellipaperclip-caddy-config
