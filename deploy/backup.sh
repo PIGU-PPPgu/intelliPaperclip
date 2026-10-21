@@ -15,9 +15,15 @@ mkdir -p "$deploy_dir/backups"
 mkdir "$backup_dir"
 stopped=false
 resume() {
+  original_status=$?
+  trap - EXIT
   if [[ $stopped == true ]]; then
-    "${compose[@]}" up -d --wait paperclip >/dev/null || printf 'Restart Paperclip manually: deploy/up.sh\n' >&2
+    if ! "${compose[@]}" up -d --wait paperclip >/dev/null; then
+      printf 'Paperclip did not restart; run deploy/up.sh and inspect service logs.\n' >&2
+      original_status=1
+    fi
   fi
+  exit "$original_status"
 }
 trap resume EXIT
 

@@ -27,6 +27,10 @@ docker volume create intellipaperclip-home >/dev/null
 docker run --rm --volume intellipaperclip-home:/target:ro alpine:3.21 \
   sh -c 'test -z "$(ls -A /target)"' || { printf 'Paperclip home volume is not empty; restore refused.\n' >&2; exit 1; }
 
+"${compose[@]}" exec -T db pg_restore --list < "$backup_dir/database.dump" >/dev/null
+docker run --rm --volume "$backup_dir:/backup:ro" alpine:3.21 \
+  tar -tzf /backup/paperclip-home.tar.gz >/dev/null
+
 "${compose[@]}" exec -T db pg_restore -U paperclip -d paperclip --no-owner --no-acl --single-transaction \
   < "$backup_dir/database.dump"
 docker run --rm --volume intellipaperclip-home:/target \
